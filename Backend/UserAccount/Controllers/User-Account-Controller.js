@@ -4,23 +4,12 @@ import fs from "fs";
 import path from "path"; // Import the path module
 
 let refreshtokens = [];
-
-import rateLimit from 'express-rate-limit';
-
 // Set up rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again later",
-  headers: true, // Send rate limit info in headers
-});
-
-// Apply the rate limiter to specific routes
-app.use('/register', limiter); // Apply to the registration route
+// Apply to the registration route
 
 export const UserRegister = async (req, res) => {
   try {
-    let file = 'N/A';
+    let file = "N/A";
     if (req.file) {
       const sanitizedFilename = path.basename(req.file.filename);
       file = sanitizedFilename;
@@ -31,18 +20,20 @@ export const UserRegister = async (req, res) => {
       return res.status(404).json({ message: "User Already registered..!" });
     }
 
-    const USER_ID = 'UID' + Date.now();
+    const USER_ID = "UID" + Date.now();
     const no = 0;
 
     let profilePictureData = Buffer.alloc(0);
-    if (file !== 'N/A') {
-      const stream = fs.createReadStream(path.join('UploadUserProfileImages', file));
+    if (file !== "N/A") {
+      const stream = fs.createReadStream(
+        path.join("UploadUserProfileImages", file)
+      );
 
-      stream.on('data', (chunk) => {
+      stream.on("data", (chunk) => {
         profilePictureData = Buffer.concat([profilePictureData, chunk]);
       });
 
-      stream.on('end', async () => {
+      stream.on("end", async () => {
         const newUser = new User({
           user_id: USER_ID,
           userName: req.body.userName,
@@ -73,7 +64,7 @@ export const UserRegister = async (req, res) => {
         }
       });
 
-      stream.on('error', (err) => {
+      stream.on("error", (err) => {
         res.status(500).json({ message: "Error reading file", error: err });
       });
     }
