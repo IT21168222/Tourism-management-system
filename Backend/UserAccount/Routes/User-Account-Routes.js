@@ -14,26 +14,13 @@ import multer from "multer";
 import path from "path";
 const router = express.Router();
 const rateLimit = require("express-rate-limit");
-const expressRateLimit = require("express-rate-limit");
 
-// General Rate Limit (can be adjusted per endpoint)
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
-  message: "Too many requests from this IP, please try again later",
-});
-
-// Apply rate limit to all routes
-router.use(limiter);
-
-// Specific Rate Limit for Sign-up
 const registerLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: "Too many accounts created from this IP, please try again later",
 });
 
-// File Upload Limits
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "UploadUserProfileImages");
@@ -43,40 +30,41 @@ const storage = multer.diskStorage({
   },
 });
 
-// Set limits for file uploads (e.g., max file size: 2MB)
 const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 2 * 1024 * 1024, // 2 MB file size limit
+  limits: { fileSize: 1 * 1024 * 1024 }, // Limit file size to 1 MB
+  fileFilter: (req, file, cb) => {
+    // Only accept certain image types (e.g., png, jpeg)
+    if (!file.mimetype.startsWith("image/")) {
+      return cb(new Error("Invalid file type"), false);
+    }
+    cb(null, true);
   },
-});
+}).single("ProfilePicture");
 
-// Rate Limit for specific sensitive routes
-const loginLimiter = rateLimit({
+// const upload = multer({ storage: storage });
+
+// router.post(
+//   "/usersignup",
+//   registerLimiter,
+//   upload.single("ProfilePicture"),
+//   UserRegister
+// );
+
+const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit login attempts
-  message: "Too many login attempts from this IP, please try again later",
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later",
+  headers: true, // Send rate limit info in headers
 });
 
-// Apply JSON body size limits globally
-router.use(express.json({ limit: "1kb" })); // Limit request body to 1 KB
-router.use(express.urlencoded({ extended: true, limit: "1kb" }));
-
-// Routes
-router.post(
-  "/usersignup",
-  registerLimiter,
-  upload.single("ProfilePicture"),
-  UserRegister
-);
-
-router.post("/usersignin", loginLimiter, Signin); // Rate limit for login
+router.post("/usersignup", limiter, UserRegister);
+router.post("/usersignin", Signin);
 router.delete("/usersignout", Signout);
-router.post("/Token", loginLimiter, tokenRefresh); // Rate limit for token refresh
+router.post("/Token", tokenRefresh);
 router.get("/allusers", getAllUsers);
 router.get("/user/:userid", getOneUser);
-router.put("/count/:id", limiter, updateCount);
-router.put("/countReduce/:id", limiter, updateCount2);
-router.put("/updateUser/:id", limiter, updateUser);
+router.put("/count/:id", updateCount);
+router.put("/countReduce/:id", updateCount2);
+router.put("/updateUser/:id", updateUser);
 
 export default router;
