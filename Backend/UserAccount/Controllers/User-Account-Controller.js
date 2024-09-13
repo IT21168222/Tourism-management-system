@@ -6,7 +6,6 @@ import path from "path"; // Import the path module
 let refreshtokens = [];
 
 export const UserRegister = async (req, res) => {
-  console.log(req.body);
   try {
     let file = "N/A";
     if (req.file) {
@@ -22,42 +21,49 @@ export const UserRegister = async (req, res) => {
     const USER_ID = "UID" + Date.now();
     const no = 0;
 
-    let profilePictureData = null;
+    let profilePictureData = Buffer.alloc(0);
     if (file !== "N/A") {
-      // Use async fs.readFile to avoid blocking the event loop
-      profilePictureData = await fs.promises.readFile(
+      const stream = fs.createReadStream(
         path.join("UploadUserProfileImages", file)
       );
-    }
 
-    const newUser = new User({
-      user_id: USER_ID,
-      userName: req.body.userName,
-      birthday: req.body.birthday,
-      email: req.body.email,
-      password: req.body.password,
-      country: req.body.country,
-      gender: req.body.gender,
-      badge: req.body.badge,
-      tel_no: req.body.tel_no,
-      post_count: no,
-      ProfilePicture: profilePictureData
-        ? {
+      stream.on("data", (chunk) => {
+        profilePictureData = Buffer.concat([profilePictureData, chunk]);
+      });
+
+      stream.on("end", async () => {
+        const newUser = new User({
+          user_id: USER_ID,
+          userName: req.body.userName,
+          birthday: req.body.birthday,
+          email: req.body.email,
+          password: req.body.password,
+          country: req.body.country,
+          gender: req.body.gender,
+          badge: req.body.badge,
+          tel_no: req.body.tel_no,
+          post_count: no,
+          ProfilePicture: {
             data: profilePictureData,
             contentType: "image/png",
-          }
-        : undefined,
-    });
+          },
+        });
 
-    const newAcct = await newUser.save();
-    if (newAcct) {
-      res.status(201).json({
-        message: "Registration Successful..!",
-        payload: newAcct,
+        const newAcct = await newUser.save();
+        if (newAcct) {
+          res.status(201).json({
+            message: "Registration Successful..!",
+            payload: newAcct,
+          });
+        } else {
+          res.status(400).json({
+            message: "Something Went Wrong In Account Creating..!",
+          });
+        }
       });
-    } else {
-      res.status(400).json({
-        message: "Something Went Wrong In Account Creating..!",
+
+      stream.on("error", (err) => {
+        res.status(500).json({ message: "Error reading file", error: err });
       });
     }
   } catch (error) {
