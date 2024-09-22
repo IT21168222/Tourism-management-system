@@ -254,14 +254,22 @@ export const uploadImages = async (req, res) => {
     console.log(req.body.ImagesCom)
 
 
-  if (req.body.ImagesCom.length > 0) {
-    images = req.body.ImagesCom.map((file) => {
-      console.log(file);
-      return {
-        img: Date.now()+"_"+file.name,
-      };
-    });
-  }
+ if (Array.isArray(req.body.ImagesCom) && req.body.ImagesCom.length > 0) {
+      images = req.body.ImagesCom.map((file) => {
+        if (file && typeof file.name === "string") {
+          console.log(file);
+          return {
+            img: Date.now() + "_" + file.name,
+          };
+        } else {
+          throw new Error(
+            "Invalid file format: missing or incorrect file name"
+          );
+        }
+      });
+    } else {
+      throw new Error("ImagesCom should be a non-empty array");
+    }
   console.log(images);
 
   const newImages = {
