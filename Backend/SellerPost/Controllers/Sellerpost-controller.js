@@ -61,16 +61,17 @@ export const uploadImages = async (req, res) => {
       const id = { Trip_ID: req.body.Trip_ID }
       let images = []
 
-      if (req.body.Images.length > 0) {
-        images = req.body.Images.map(file => {
+      if (Array.isArray(req.body.Images) && req.body.Images.length > 0) {
+      images = req.body.Images.map((file) => {
+        if (file && typeof file.name === "string") {
           return {
-            img: Date.now()+"_"+file.name,
-  
-          }
+            img: Date.now() + "_" + file.name,
+          };
+        } else {
+          throw new Error("Invalid file format");
         }
-  
-        )
-      }
+      });
+    }
   
       const newImages = {
         Images: images
